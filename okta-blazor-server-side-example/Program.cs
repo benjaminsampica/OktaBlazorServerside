@@ -1,8 +1,8 @@
+using AspNet.Security.OAuth.Okta;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authentication.OpenIdConnect;
-using Okta.AspNetCore;
-
 using okta_blazor_server_side_example.Data;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,18 +11,19 @@ builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddSingleton<WeatherForecastService>();
 builder.Services.AddAuthentication(options =>
-    {
-        options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
-    })
+{
+    options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = OktaAuthenticationDefaults.AuthenticationScheme;
+})
     .AddCookie()
-    .AddOktaMvc(new OktaMvcOptions
+    .AddOkta(options =>
     {
-        // Replace the Okta placeholders in appsettings.json with your Okta configuration.
-        OktaDomain = builder.Configuration.GetValue<string>("Okta:OktaDomain"),
-        ClientId = builder.Configuration.GetValue<string>("Okta:ClientId"),
-        ClientSecret = builder.Configuration.GetValue<string>("Okta:ClientSecret"),
-        AuthorizationServerId = builder.Configuration.GetValue<string>("Okta:AuthorizationServerId"),
+        options.ClientId = builder.Configuration.GetValue<string>("Okta:ClientId");
+        options.ClientSecret = builder.Configuration.GetValue<string>("Okta:ClientSecret");
+        options.Domain = builder.Configuration.GetValue<string>("Okta:OktaDomain");
+
+        options.Scope.Add("groups");
+        options.ClaimActions.MapJsonKey(ClaimTypes.Role, "groups");
     });
 
 var app = builder.Build();
@@ -44,7 +45,7 @@ app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapRazorPages().RequireAuthorization();
+app.MapControllers();
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
 
